@@ -1,40 +1,60 @@
 #include <LiquidCrystal_I2C.h>
-//make sure to install liquidcrystal by arduino in Library Manager
 
-//RS, Enable, then d4, 5, 6, 7 (out of d0-7 but we use 4bit mode).
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 int sensorValue;
+float voltage;
+float wireResistance;
+float knownResistence = 2000.0;
+const float initialResistence = 7300;
+const float sensitivityFactor = 3.3;
+const float radius = 0.001;
+const float crossSectionalArea = 3.14159 * radius * radius;
+const float originalLength = 0.87;
+const float modulus = 12000000;
+
+const float springConstant = 32;
+
+const float area = 0.000254;
+
+const float gasConstant = 8.31;
+const float absoluteTemperature = 310;
+
+const float originalMoles = 1.71;
+
 
 void setup() {
-  //pinMode(7, OUTPUT);
-  //Serial.begin(9600); //for stretch sensor
+  Serial.begin(9600);
   lcd.init();
-  lcd.backlight(); // for LCD
-  lcd.setCursor(0,0);
+  lcd.backlight();
+  lcd.setCursor(0, 0);
   lcd.print("Begin Test");
 }
-void loop() {
-  // lcd.setCursor(0,0);
-  // lcd.print("test");
-  // digitalWrite(LED_BUILTIN, HIGH);
-  // delay(3000);
-  // lcd.clear();
-  // digitalWrite(LED_BUILTIN, LOW);
-  // delay(3000); // ^ for LCD
 
-  // For the stretch sensor:
-  //  // Read analog input
+void loop() {
   sensorValue = analogRead(A0);
-  float voltage = sensorValue * (5.0 / 1023.0); // Convert analog value to voltage
-  float knownResistance = 2000.0; // Replace with the value of the known resistor in ohms
-  float wireResistance = (5.0 * knownResistance) / (voltage) - knownResistance; // Calculate wire resistance
+  voltage = sensorValue * (5.0 / 1023.0);
+  wireResistance = (5.0 * knownResistence) / (voltage) - knownResistence;
+
+  float changeInResistence = wireResistance - initialResistence;
+  float force;
+  force = (changeInResistence / initialResistence) * (1 / sensitivityFactor) * (crossSectionalArea / originalLength) * modulus;
+  float changeInLength = force / springConstant;
+
+  float pressure = force / area;
+
+  float radii = (originalLength + changeInLength) / (2 * 3.14159);
+  float volume = 3.14159 * radii * radii * 0.27;
+
+  float moles = (pressure * volume) / (gasConstant * absoluteTemperature);
 
 
   lcd.clear();
-  lcd.setCursor(0,0);
-  lcd.print("Wire Resistance:");
+  lcd.setCursor(0, 0);
+  lcd.print("Length:");
+  lcd.setCursor(8,0);
+  lcd.print(changeInLength * 100 + originalLength * 100);
+  lcd.print("cm");
   lcd.setCursor(0,1);
-  lcd.print(wireResistance);
-  delay(10); // Delay for readability, adjust as needed
-  
+  lcd.print(originalMoles + moles);
+  delay(10);
 }
